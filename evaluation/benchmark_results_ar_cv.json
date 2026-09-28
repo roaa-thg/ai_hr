@@ -1,0 +1,54 @@
+[
+  {
+    "concurrency": 1,
+    "error_rate": 0.0,
+    "avg_ttft_ms": 441.51,
+    "avg_latency_s": 21.92,
+    "avg_tok_s": 23.33,
+    "avg_input_tokens": 1129.0,
+    "avg_output_tokens": 501.0,
+    "throughput_rps": 0.05,
+    "throughput_tps": 74.37,
+    "gpu_vram_mb": 43661.0,
+    "gpu_util_pct": 98.0
+  },
+  {
+    "concurrency": 2,
+    "error_rate": 0.0,
+    "avg_ttft_ms": 725.52,
+    "avg_latency_s": 22.6,
+    "avg_tok_s": 22.85,
+    "avg_input_tokens": 1129.5,
+    "avg_output_tokens": 500.0,
+    "throughput_rps": 0.09,
+    "throughput_tps": 143.89,
+    "gpu_vram_mb": 43661.0,
+    "gpu_util_pct": 98.0
+  },
+  {
+    "concurrency": 4,
+    "error_rate": 0.0,
+    "avg_ttft_ms": 1463.67,
+    "avg_latency_s": 30.55,
+    "avg_tok_s": 22.35,
+    "avg_input_tokens": 1305.8,
+    "avg_output_tokens": 650.8,
+    "throughput_rps": 0.09,
+    "throughput_tps": 179.42,
+    "gpu_vram_mb": 43661.0,
+    "gpu_util_pct": 99.0
+  },
+  {
+    "concurrency": 8,
+    "error_rate": 0.0,
+    "avg_ttft_ms": 3358.79,
+    "avg_latency_s": 48.15,
+    "avg_tok_s": 20.98,
+    "avg_input_tokens": 1608.6,
+    "avg_output_tokens": 942.2,
+    "throughput_rps": 0.11,
+    "throughput_tps": 274.72,
+    "gpu_vram_mb": 44057.0,
+    "gpu_util_pct": 98.0
+  }
+]

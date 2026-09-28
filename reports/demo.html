@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR AI Evaluation Lab</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet">
+    <style>
+        .logo {
+            height: 100px;
+            width: auto;
+            display: block
+        }
+
+        :root {
+            --ink: #0a0f11;
+            --ink-deep: #060a0b;
+            --signal: #2ec4dc;
+            --hero-text: #e9f4f0;
+            --hero-dim: #a7bdb8;
+            --hero-faint: #7f9793;
+            --hero-line: rgba(146, 224, 205, .14);
+            --hero-line-strong: rgba(146, 224, 205, .28);
+            --bar: rgba(7, 17, 18, .78);
+
+            --bg: #FBFAF7;
+            --card: #ffffff;
+            --text: #1A1A1A;
+            --muted: #5d6563;
+            --line: #EAE7E0;
+            --line-strong: #d9d5cc;
+            --accent-text: #0b6f80;
+            --best-bg: #e5f5f7;
+            --row-hover: #f5fbfc;
+            --th-bg: #1A1A1A;
+            --th-text: #ffffff;
+            --warn-text: #a33b1f;
+            --shadow: 0 4px 24px rgba(26, 58, 92, .07);
+
+            --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+            --font-ar: 'IBM Plex Sans Arabic', 'Inter', system-ui, sans-serif;
+            --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+        }
+
+        @media (prefers-color-scheme:dark) {
+            :root:not([data-theme="light"]) {
+                color-scheme: dark;
+                --bg: #0d1315;
+                --card: #131c1f;
+                --text: #e6eeec;
+                --muted: #9dafab;
+                --line: #223033;
+                --line-strong: #2e3f42;
+                --accent-text: #62d4e6;
+                --best-bg: rgba(46, 196, 220, .13);
+                --row-hover: #172326;
+                --th-bg: #1c2a2d;
+                --th-text: #e6eeec;
+                --warn-text: #f09a7e;
+                --shadow: none;
+            }
+        }
+
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --bg: #0d1315;
+            --card: #131c1f;
+            --text: #e6eeec;
+            --muted: #9dafab;
+            --line: #223033;
+            --line-strong: #2e3f42;
+            --accent-text: #62d4e6;
+            --best-bg: rgba(46, 196, 220, .13);
+            --row-hover: #172326;
+            --th-bg: #1c2a2d;
+            --th-text: #e6eeec;
+            --warn-text: #f09a7e;
+            --shadow: none;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box
+        }
+
+        html {
+            scroll-behavior: smooth
+        }
+
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--font-ui);
+            font-size: 15px;
+            line-height: 1.6;
+            -webkit-font-smoothing: antialiased
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        p {
+            margin: 0
+        }
+
+        h1,
+        h2,
+        h3 {
+            text-wrap: balance
+        }
+
+        ::selection {
+            background: var(--signal);
+            color: var(--ink-deep)
+        }
+
+        :focus-visible {
+            outline: 2px solid var(--signal);
+            outline-offset: 2px;
+            border-radius: 4px
+        }
+
+        /* language switching */
+        body:not(.lang-ar) .ar {
+            display: none !important
+        }
+
+        body.lang-ar .en {
+            display: none !important
+        }
+
+        body.lang-ar {
+            font-family: var(--font-ar)
+        }
+
+        body.lang-ar .flip {
+            direction: rtl
+        }
+
+        .num {
+            direction: ltr;
+            unicode-bidi: isolate;
+            font-variant-numeric: tabular-nums
+        }
+
+        .wrap {
+            max-width: 960px;
+            margin: 0 auto;
+            padding-inline: 24px
+        }
+
+        @media(max-width:480px) {
+            .wrap {
+                padding-inline: 16px
+            }
+        }
+
+        /* header */
+        header {
+            position: sticky;
+            top: env(safe-area-inset-top, 0px);
+            z-index: 50;
+            background: var(--bar);
+            backdrop-filter: blur(16px) saturate(1.3);
+            -webkit-backdrop-filter: blur(16px) saturate(1.3);
+            border-bottom: 1px solid var(--hero-line);
+            color: var(--hero-text)
+        }
+
+        header .inner {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 12px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px
+        }
+
+        @media(max-width:480px) {
+            header .inner {
+                padding-inline: 16px
+            }
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 0
+        }
+
+        .brand svg {
+            flex: none
+        }
+
+        .brand-name {
+            font-weight: 600;
+            font-size: 1.5rem;
+            letter-spacing: -.02em;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis
+        }
+
+        .head-right {
+            display: flex;
+            align-items: center;
+            gap: 20px
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 5px 12px 5px 9px;
+            border: 1px solid var(--hero-line);
+            border-radius: 100px;
+            font-family: var(--font-mono);
+            font-size: 10.5px;
+            letter-spacing: .03em;
+            color: var(--hero-dim);
+            white-space: nowrap
+        }
+
+        .chip-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--signal);
+            box-shadow: 0 0 0 0 rgba(46, 196, 220, .6);
+            animation: pulse 1.6s ease-out infinite
+        }
+
+        @keyframes pulse {
+            to {
+                box-shadow: 0 0 0 7px rgba(46, 196, 220, 0)
+            }
+        }
+
+        .lang {
+            display: inline-flex;
+            border: 1px solid var(--hero-line-strong);
+            border-radius: 100px;
+            padding: 2px
+        }
+
+        .lang button {
+            border: 0;
+            background: transparent;
+            color: var(--hero-dim);
+            font: 600 12px/1 var(--font-ui);
+            padding: 6px 11px;
+            border-radius: 100px;
+            cursor: pointer
+        }
+
+        .lang button[aria-pressed="true"] {
+            background: var(--signal);
+            color: #06232b
+        }
+
+        .lang button:hover:not([aria-pressed="true"]) {
+            color: #fff
+        }
+
+        @media(max-width:560px) {
+            .chip {
+                display: none
+            }
+        }
+
+        /* hero */
+        .hero-block {
+            background: radial-gradient(120% 90% at 50% 0%, #12222e, var(--ink) 70%);
+            color: var(--hero-text);
+            position: relative;
+            overflow: hidden
+        }
+
+        .bg-rays {
+            position: absolute;
+            inset: 0;
+            overflow: hidden;
+            pointer-events: none
+        }
+
+        .bg-rays span {
+            position: absolute;
+            width: 180%;
+            height: 1px;
+            left: -40%;
+            background: linear-gradient(90deg, transparent, rgba(46, 196, 220, .45), transparent);
+            filter: blur(2px);
+            animation: ray linear infinite;
+            opacity: .4;
+            transform: rotate(18deg)
+        }
+
+        .bg-rays span:nth-child(1) {
+            top: 8%;
+            animation-duration: 22s
+        }
+
+        .bg-rays span:nth-child(2) {
+            top: 30%;
+            animation-duration: 28s;
+            animation-delay: -6s
+        }
+
+        .bg-rays span:nth-child(3) {
+            top: 55%;
+            animation-duration: 19s;
+            animation-delay: -12s
+        }
+
+        @keyframes ray {
+            0% {
+                transform: translateX(-8%) rotate(18deg);
+                opacity: 0
+            }
+
+            15%,
+            85% {
+                opacity: .45
+            }
+
+            100% {
+                transform: translateX(8%) rotate(18deg);
+                opacity: 0
+            }
+        }
+
+        .hero {
+            position: relative;
+            padding-block: clamp(52px, 8vw, 88px) clamp(40px, 6vw, 60px);
+            display: grid;
+            gap: 18px
+        }
+
+        .eyebrow {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+            color: var(--signal)
+        }
+
+        .eyebrow.ar {
+            font-family: var(--font-ar);
+            letter-spacing: 0;
+            font-size: 13px
+        }
+
+        .hero h1 {
+            font-size: clamp(2rem, 5.2vw, 3.1rem);
+            letter-spacing: -.035em;
+            font-weight: 600;
+            line-height: 1.12;
+            color: #fff;
+            max-width: 18ch
+        }
+
+        .hero h1.ar {
+            letter-spacing: 0;
+            line-height: 1.35;
+            font-size: clamp(1.8rem, 4.6vw, 2.6rem);
+            max-width: 20ch
+        }
+
+        .hero .lead {
+            display: grid;
+            gap: 10px;
+            max-width: 62ch;
+            color: var(--hero-dim);
+            font-size: 1.02rem
+        }
+
+        .hero .lead strong {
+            color: var(--hero-text);
+            font-weight: 500
+        }
+
+        .hero-btns {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 6px
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--signal);
+            color: #06232b;
+            padding: 12px 22px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: .88rem;
+            transition: transform .2s cubic-bezier(.2, .8, .2, 1), box-shadow .2s ease, border-color .2s, color .2s
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 26px rgba(46, 196, 220, .25)
+        }
+
+        .btn.ghost {
+            background: transparent;
+            color: var(--hero-text);
+            border: 1px solid var(--hero-line-strong)
+        }
+
+        .btn.ghost:hover {
+            border-color: var(--signal);
+            color: var(--signal);
+            box-shadow: none
+        }
+
+        .hero-stats {
+            margin-top: 18px;
+            border-top: 1px solid var(--hero-line);
+            padding-top: 18px;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px
+        }
+
+        .hero-stats div {
+            display: grid;
+            gap: 2px
+        }
+
+        .hero-stats b {
+            font-family: var(--font-mono);
+            font-weight: 500;
+            font-size: 1.35rem;
+            color: #fff
+        }
+
+        .hero-stats span {
+            font-size: 12px;
+            color: var(--hero-faint)
+        }
+
+        @media(max-width:640px) {
+            .hero-stats {
+                grid-template-columns: repeat(2, 1fr)
+            }
+        }
+
+        /* sections */
+        main section {
+            padding-block: 52px;
+            border-top: 1px solid var(--line);
+            display: grid;
+            gap: 20px
+        }
+
+        main section:first-child {
+            border-top: 0
+        }
+
+        .sec-head {
+            display: grid;
+            gap: 4px
+        }
+
+        .sec-head .k {
+            font-family: var(--font-mono);
+            font-size: 11px;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: var(--accent-text)
+        }
+
+        .sec-head .k.ar {
+            font-family: var(--font-ar);
+            letter-spacing: 0;
+            font-size: 12.5px
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -.02em
+        }
+
+        h2.ar {
+            letter-spacing: 0
+        }
+
+        .sub {
+            color: var(--muted);
+            font-size: .92rem;
+            max-width: 62ch
+        }
+
+        /* video */
+        .video-card {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 12px;
+            box-shadow: var(--shadow)
+        }
+
+        .video-empty {
+            aspect-ratio: 16/9;
+            max-width: 100%;
+            border-radius: 8px;
+            background: repeating-linear-gradient(135deg, transparent 0 10px, rgba(46, 196, 220, .05) 10px 11px), var(--bg);
+            border: 1px dashed var(--line-strong);
+            display: grid;
+            place-items: center;
+            align-content: center;
+            gap: 12px;
+            color: var(--muted);
+            font-size: .88rem;
+            text-align: center;
+            padding: 20px
+        }
+
+        .play {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            border: 1px solid var(--line-strong);
+            display: grid;
+            place-items: center;
+            color: var(--accent-text)
+        }
+
+        video {
+            display: block;
+            width: 100%;
+            border-radius: 8px
+        }
+
+        /* steps */
+        .steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            counter-reset: s
+        }
+
+        .step {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 20px;
+            display: grid;
+            gap: 8px;
+            align-content: start;
+            transition: transform .25s cubic-bezier(.2, .8, .2, 1), border-color .25s
+        }
+
+        .step:hover {
+            transform: translateY(-4px);
+            border-color: var(--signal)
+        }
+
+        .step .n {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--text);
+            color: var(--bg);
+            display: grid;
+            place-items: center;
+            font-family: var(--font-mono);
+            font-weight: 600;
+            font-size: .8rem;
+            transition: background .2s
+        }
+
+        .step:hover .n {
+            background: var(--signal);
+            color: #06232b
+        }
+
+        .step h3 {
+            font-size: .98rem;
+            font-weight: 600
+        }
+
+        .step p {
+            color: var(--muted);
+            font-size: .88rem
+        }
+
+        .tag {
+            font-family: var(--font-mono);
+            font-size: .78em;
+            background: var(--best-bg);
+            color: var(--accent-text);
+            padding: 1px 6px;
+            border-radius: 4px;
+            white-space: nowrap
+        }
+
+        @media(max-width:720px) {
+            .steps {
+                grid-template-columns: 1fr
+            }
+        }
+
+        /* models */
+        .models {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px
+        }
+
+        .model {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 16px 18px;
+            display: grid;
+            gap: 6px;
+            background: var(--card)
+        }
+
+        .model .mn {
+            font-family: var(--font-mono);
+            font-weight: 600;
+            font-size: .95rem
+        }
+
+        .model .mt {
+            font-size: .82rem;
+            color: var(--muted)
+        }
+
+        .pill {
+            justify-self: start;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 10px;
+            border-radius: 100px;
+            border: 1px solid var(--line-strong);
+            color: var(--muted)
+        }
+
+        .model.deployed {
+            border-color: var(--signal);
+            background: var(--best-bg)
+        }
+
+        .model.deployed .pill {
+            background: var(--signal);
+            border-color: var(--signal);
+            color: #06232b
+        }
+
+        @media(max-width:720px) {
+            .models {
+                grid-template-columns: 1fr
+            }
+        }
+
+        /* tables */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap
+        }
+
+        .tab-btn {
+            padding: 8px 16px;
+            border-radius: 100px;
+            border: 1px solid var(--line-strong);
+            background: var(--card);
+            font: 600 .78rem var(--font-ui);
+            color: var(--muted);
+            cursor: pointer
+        }
+
+        .tab-btn:hover {
+            color: var(--text)
+        }
+
+        .tab-btn[aria-selected="true"] {
+            background: var(--text);
+            color: var(--bg);
+            border-color: var(--text)
+        }
+
+        .table-scroll {
+            overflow-x: auto;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: var(--card)
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 560px
+        }
+
+        th,
+        td {
+            padding: 11px 16px;
+            text-align: start;
+            border-bottom: 1px solid var(--line)
+        }
+
+        th {
+            background: var(--th-bg);
+            color: var(--th-text);
+            font: 600 .72rem var(--font-mono);
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            white-space: nowrap
+        }
+
+        body.lang-ar th {
+            font-family: var(--font-ar);
+            letter-spacing: 0;
+            font-size: .8rem;
+            text-transform: none
+        }
+
+        th.c,
+        td.c {
+            text-align: end
+        }
+
+        td {
+            font-size: .88rem
+        }
+
+        td.c {
+            font-family: var(--font-mono);
+            font-variant-numeric: tabular-nums;
+            font-size: .85rem
+        }
+
+        td .dim {
+            display: block;
+            font-size: .76rem;
+            color: var(--muted)
+        }
+
+        tr:last-child td {
+            border-bottom: 0
+        }
+
+        tbody tr:hover td {
+            background: var(--row-hover)
+        }
+
+        td.best {
+            color: var(--accent-text);
+            font-weight: 600;
+            background: var(--best-bg)
+        }
+
+        td.bad {
+            color: var(--warn-text);
+            font-weight: 600
+        }
+
+        .legend {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: .8rem;
+            color: var(--muted)
+        }
+
+        .legend i {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            background: var(--best-bg);
+            border: 1px solid var(--signal);
+            margin-inline-end: 6px;
+            vertical-align: -1px
+        }
+
+        /* metrics */
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px
+        }
+
+        .metric {
+            background: var(--card);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 18px;
+            display: grid;
+            gap: 4px
+        }
+
+        .metric .v {
+            font-family: var(--font-mono);
+            font-size: 1.45rem;
+            font-weight: 600;
+            color: var(--accent-text);
+            direction: ltr;
+            text-align: start
+        }
+
+        body.lang-ar .metric .v {
+            text-align: end
+        }
+
+        .metric .l {
+            font-size: .8rem;
+            color: var(--muted)
+        }
+
+        @media(max-width:720px) {
+            .metrics {
+                grid-template-columns: repeat(2, 1fr)
+            }
+        }
+
+        /* conclusion */
+        .conclusion {
+            background: var(--ink);
+            color: #fff;
+            border-radius: 16px;
+            padding: clamp(22px, 4vw, 34px);
+            position: relative;
+            overflow: hidden;
+            display: grid;
+            gap: 12px
+        }
+
+        .conclusion::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(80% 100% at 0% 0%, rgba(46, 196, 220, .16), transparent 60%);
+            pointer-events: none
+        }
+
+        .conclusion>* {
+            position: relative
+        }
+
+        .conclusion h2 {
+            font-size: 1.2rem
+        }
+
+        .conclusion ul {
+            margin: 0;
+            padding-inline-start: 18px;
+            display: grid;
+            gap: 8px;
+            color: #cfe3ea;
+            font-size: .92rem;
+            max-width: 70ch
+        }
+
+        .conclusion b {
+            color: #fff;
+            font-weight: 600
+        }
+
+        footer {
+            padding-block: 28px 40px;
+            border-top: 1px solid var(--line);
+            color: var(--muted);
+            font-size: .8rem
+        }
+
+        @media (prefers-reduced-motion:reduce) {
+
+            *,
+            *::before,
+            *::after {
+                animation: none !important;
+                transition: none !important
+            }
+
+            html {
+                scroll-behavior: auto
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="inner">
+            <div class="brand">
+                <img src="Logo_HR_AI.png" alt="HR AI Evaluation Lab logo" class="logo">
+                <span class="brand-name en">HR AI Evaluation Lab</span>
+                <span class="brand-name ar">مختبر تقييم الذكاء الاصطناعي للموارد البشرية</span>
+            </div>
+            <div class="head-right">
+                <span class="chip"><span class="chip-dot"></span>Qwen2.5-14B · vLLM</span>
+                <div class="lang" role="group" aria-label="Language">
+                    <button type="button" id="lang-en" data-lang="en" aria-pressed="true">EN</button>
+                    <button type="button" id="lang-ar" data-lang="ar" aria-pressed="false">ع</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="hero-block">
+        <div class="bg-rays" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div class="wrap hero flip">
+            <div class="eyebrow en">Resume extraction · Evaluation · Job matching</div>
+            <div class="eyebrow ar">استخراج وتقييم السير الذاتية ومطابقة الوظائف</div>
+
+            <h1 class="en">Turning resumes into structured candidate data.</h1>
+            <h1 class="ar">نحوّل السير الذاتية إلى بيانات مرشحين منظّمة.</h1>
+
+            <div class="lead en">
+                <p>An automated pipeline that reads resumes in <strong>Arabic and English</strong> and extracts a
+                    structured candidate profile. Built and benchmarked for <strong>Beamdata.ai</strong> as an AIDC
+                    bootcamp capstone.</p>
+                <p>HR teams can add a job description and upload several resumes at once. The system returns every
+                    candidate with a job-matching score.</p>
+            </div>
+            <div class="lead ar">
+                <p>نظام آلي يقرأ السير الذاتية <strong>بالعربي والإنجليزي</strong> ويستخرج منها ملف مرشح منظّم. تم بناؤه
+                    واختباره لصالح <strong>Beamdata.ai</strong> كمشروع تخرج في معسكر AIDC.</p>
+                <p>يقدر فريق الموارد البشرية يضيف وصف الوظيفة ويرفع عدة سير ذاتية دفعة وحدة، والنظام يرجع لكل مرشح درجة
+                    مطابقة مع الوظيفة.</p>
+            </div>
+
+            <div class="hero-btns">
+                <a class="btn" href="#demo"><span class="en">Watch the demo</span><span class="ar">شاهد العرض</span></a>
+                <a class="btn ghost" href="https://github.com/roaa-thg/AIDC-RCP-HR"><span class="en">View the
+                        report</span><span class="ar">اطّلع على التقرير</span></a>
+            </div>
+
+            <div class="hero-stats">
+                <div><b class="num">72</b><span class="en">resumes benchmarked</span><span class="ar">سيرة ذاتية
+                        حقيقية</span></div>
+                <div><b class="num">36 / 36</b><span class="en">English / Arabic</span><span class="ar">إنجليزي /
+                        عربي</span></div>
+                <div><b class="num">3</b><span class="en">LLMs compared</span><span class="ar">نماذج لغوية</span></div>
+                <div><b class="num">0.00%</b><span class="en">hallucination, Arabic (deployed model)</span><span
+                        class="ar">هلوسة بالعربي (النموذج المنشور)</span></div>
+            </div>
+        </div>
+    </div>
+
+    <main class="wrap flip">
+
+        <section id="demo">
+            <div class="sec-head">
+                <span class="k en">Demo</span><span class="k ar">العرض</span>
+                <h2 class="en">See it in action</h2>
+                <h2 class="ar">النظام وهو يشتغل</h2>
+            </div>
+            <div class="video-card">
+                <div class="video-empty">
+                    <div class="play"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M8 5.5v13l10.5-6.5z" fill="currentColor" />
+                        </svg></div>
+                    <span class="en">Demo video coming soon</span><span class="ar">الفيديو التوضيحي قريبًا</span>
+                </div>
+                <!-- Replace the .video-empty div with:
+      <video controls preload="metadata"><source src="ai_hub_demo.mp4" type="video/mp4"></video>
+      -->
+            </div>
+        </section>
+
+        <section>
+            <div class="sec-head">
+                <span class="k en">Pipeline</span><span class="k ar">خط المعالجة</span>
+                <h2 class="en">How it works</h2>
+                <h2 class="ar">كيف يعمل النظام</h2>
+            </div>
+            <div class="steps">
+                <div class="step">
+                    <div class="n">1</div>
+                    <h3 class="en">Upload a resume</h3>
+                    <h3 class="ar">رفع السيرة الذاتية</h3>
+                    <p class="en">Upload a CV in Arabic or English through the web interface, with an optional job
+                        description.</p>
+                    <p class="ar">يرفع المستخدم السيرة بالعربي أو الإنجليزي عبر واجهة الويب، ومعها وصف الوظيفة إذا حب.
+                    </p>
+                </div>
+                <div class="step">
+                    <div class="n">2</div>
+                    <h3 class="en">Extraction runs</h3>
+                    <h3 class="ar">تشغيل الاستخراج</h3>
+                    <p class="en"><span class="tag">FastAPI</span> processes the file and sends it to <span
+                            class="tag">Qwen2.5-14B</span> served on <span class="tag">vLLM</span>.</p>
+                    <p class="ar">تعالج <span class="tag">FastAPI</span> الملف وترسله لنموذج <span
+                            class="tag">Qwen2.5-14B</span> المنشور على <span class="tag">vLLM</span>.</p>
+                </div>
+                <div class="step">
+                    <div class="n">3</div>
+                    <h3 class="en">Get a structured profile</h3>
+                    <h3 class="ar">استلام ملف منظّم</h3>
+                    <p class="en">A JSON candidate profile comes back: name, experience, education, skills,
+                        certifications, and a match score.</p>
+                    <p class="ar">يرجع ملف JSON للمرشح: الاسم، الخبرات، التعليم، المهارات، الشهادات، ودرجة المطابقة.</p>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="sec-head">
+                <span class="k en">Models</span><span class="k ar">النماذج</span>
+                <h2 class="en">Three models tested, one deployed</h2>
+                <h2 class="ar">ثلاث نماذج اختُبرت، وواحد نُشر</h2>
+            </div>
+            <div class="models">
+                <div class="model">
+                    <span class="mn">GPT-5.6 Sol</span>
+                    <span class="mt en">API-based</span><span class="mt ar">عبر API</span>
+                    <span class="pill en">Tested</span><span class="pill ar">اختُبر</span>
+                </div>
+                <div class="model">
+                    <span class="mn">Qwen2.5-7B</span>
+                    <span class="mt en">Self-hosted</span><span class="mt ar">استضافة ذاتية</span>
+                    <span class="pill en">Tested</span><span class="pill ar">اختُبر</span>
+                </div>
+                <div class="model deployed">
+                    <span class="mn">Qwen2.5-14B</span>
+                    <span class="mt en">Self-hosted on vLLM, single GPU</span><span class="mt ar">استضافة ذاتية على
+                        vLLM، معالج رسومات واحد</span>
+                    <span class="pill en">Deployed</span><span class="pill ar">منشور</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="results">
+            <div class="sec-head">
+                <span class="k en">Quality benchmark</span><span class="k ar">بنشمارك الجودة</span>
+                <h2 class="en">Extraction quality by language</h2>
+                <h2 class="ar">جودة الاستخراج حسب اللغة</h2>
+            </div>
+            <div class="tabs" role="tablist">
+                <button class="tab-btn" role="tab" id="tab-en" aria-selected="true" aria-controls="en-results"><span
+                        class="en">English CVs</span><span class="ar">السير الإنجليزية</span></button>
+                <button class="tab-btn" role="tab" id="tab-ar" aria-selected="false" aria-controls="ar-results"><span
+                        class="en">Arabic CVs</span><span class="ar">السير العربية</span></button>
+            </div>
+            <div id="tables"></div>
+            <div class="legend">
+                <span><i></i><span class="en">Best in row (ties shared)</span><span class="ar">الأفضل في الصف (التعادل
+                        مشترك)</span></span>
+                <span class="en">↓ lower is better</span><span class="ar">↓ الأقل أفضل</span>
+            </div>
+        </section>
+
+        <section>
+            <div class="sec-head">
+                <span class="k en">Infrastructure benchmark</span><span class="k ar">بنشمارك البنية التحتية</span>
+                <h2 class="en">Serving performance of Qwen2.5-14B</h2>
+                <h2 class="ar">أداء تشغيل Qwen2.5-14B</h2>
+            </div>
+            <div class="metrics">
+                <div class="metric">
+                    <div class="v">94.95 ms</div>
+                    <div class="l en">Time to first token</div>
+                    <div class="l ar">زمن أول توكن</div>
+                </div>
+                <div class="metric">
+                    <div class="v">17.28 tok/s</div>
+                    <div class="l en">Generation speed</div>
+                    <div class="l ar">سرعة التوليد</div>
+                </div>
+                <div class="metric">
+                    <div class="v">6.56 s</div>
+                    <div class="l en">End-to-end latency</div>
+                    <div class="l ar">زمن الاستجابة الكامل</div>
+                </div>
+                <div class="metric">
+                    <div class="v">8,192</div>
+                    <div class="l en">Context length (tokens)</div>
+                    <div class="l ar">طول السياق (توكن)</div>
+                </div>
+            </div>
+        </section>
+
+        <section>
+            <div class="conclusion">
+                <h2 class="en">Why Qwen2.5-14B was deployed</h2>
+                <h2 class="ar">ليش اخترنا Qwen2.5-14B للنشر</h2>
+                <ul class="en">
+                    <li><b>Best F1 on English resumes</b> (90.52%), ahead of GPT-5.6 Sol (84.97%).</li>
+                    <li><b>Close to GPT-5.6 Sol on Arabic</b>: 96.87% F1 vs 97.05%.</li>
+                    <li><b>Lowest hallucination</b> in both languages: 0.89% English, 0.00% Arabic, while Qwen2.5-7B
+                        reached 48.84% on Arabic.</li>
+                    <li><b>No per-token API cost</b>: it runs self-hosted on a single GPU.</li>
+                </ul>
+                <ul class="ar">
+                    <li><b>أعلى F1 على السير الإنجليزية</b> (90.52%)، متقدم على GPT-5.6 Sol (84.97%).</li>
+                    <li><b>قريب جدًا من GPT-5.6 Sol بالعربي</b>: 96.87% مقابل 97.05%.</li>
+                    <li><b>أقل نسبة هلوسة</b> في اللغتين: 0.89% إنجليزي و0.00% عربي، بينما وصل Qwen2.5-7B إلى 48.84%
+                        بالعربي.</li>
+                    <li><b>بدون تكلفة لكل توكن</b>: يشتغل باستضافة ذاتية على معالج رسومات واحد.</li>
+                </ul>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="wrap flip">
+        <span class="en">AIDC bootcamp capstone · Team 8 · Built for Beamdata.ai</span>
+        <span class="ar">مشروع تخرج معسكر AIDC · الفريق 8 · لصالح Beamdata.ai</span>
+    </footer>
+
+    <script>
+        (function () {
+            // [dimension en, dimension ar, metric en, metric ar, lowerIsBetter, GPT, Q14, Q7]
+            var rows = {
+                en: [
+                    ["Correctness", "الدقة", "Extraction precision", "دقة الاستخراج", 0, 76.71, 88.63, 88.65],
+                    ["Completeness", "الاكتمال", "Extraction recall", "استدعاء الاستخراج", 0, 95.23, 92.49, 88.90],
+                    ["Overall quality", "الجودة الإجمالية", "Extraction F1", "F1 للاستخراج", 0, 84.97, 90.52, 88.77],
+                    ["Relevance", "الملاءمة", "Relevance score", "درجة الملاءمة", 0, 91.92, 91.92, 91.79],
+                    ["Hallucination", "الهلوسة", "Hallucination rate ↓", "نسبة الهلوسة ↓", 1, 2.50, 0.89, 1.63],
+                    ["Instruction following", "اتباع التعليمات", "Instruction-following score", "درجة اتباع التعليمات", 0, 73.00, 71.04, 69.23],
+                    ["Structured output", "المخرجات المنظمة", "Valid JSON", "JSON صالح", 0, 100, 100, 97.22],
+                    ["Schema compliance", "الالتزام بالمخطط", "Schema compliance", "الالتزام بالمخطط", 0, 88.35, 88.35, 89.12]
+                ],
+                ar: [
+                    ["Correctness", "الدقة", "Extraction precision", "دقة الاستخراج", 0, 96.13, 96.85, 92.77],
+                    ["Completeness", "الاكتمال", "Extraction recall", "استدعاء الاستخراج", 0, 97.98, 96.90, 93.83],
+                    ["Overall quality", "الجودة الإجمالية", "Extraction F1", "F1 للاستخراج", 0, 97.05, 96.87, 93.30],
+                    ["Relevance", "الملاءمة", "Relevance score", "درجة الملاءمة", 0, 96.21, 96.09, 94.80],
+                    ["Hallucination", "الهلوسة", "Hallucination rate ↓", "نسبة الهلوسة ↓", 1, 6.00, 0.00, 48.84],
+                    ["Instruction following", "اتباع التعليمات", "Instruction-following score", "درجة اتباع التعليمات", 0, 92.70, 92.67, 90.13],
+                    ["Structured output", "المخرجات المنظمة", "Valid JSON", "JSON صالح", 0, 100, 100, 100],
+                    ["Schema compliance", "الالتزام بالمخطط", "Schema compliance", "الالتزام بالمخطط", 0, 94.23, 93.91, 96.79]
+                ]
+            };
+            function fmt(v) { return v === 100 ? "100%" : v.toFixed(2) + "%"; }
+            var host = document.getElementById("tables");
+            ["en", "ar"].forEach(function (k) {
+                var html = '<div class="table-scroll" role="tabpanel" id="' + k + '-results" aria-labelledby="tab-' + k + '"' + (k === "ar" ? " hidden" : "") + '><table><thead><tr>' +
+                    '<th><span class="en">Quality dimension</span><span class="ar">بُعد الجودة</span></th>' +
+                    '<th class="c">GPT-5.6 Sol</th><th class="c">Qwen2.5-14B</th><th class="c">Qwen2.5-7B</th></tr></thead><tbody>';
+                rows[k].forEach(function (r) {
+                    var vals = [r[5], r[6], r[7]], best = r[4] ? Math.min.apply(null, vals) : Math.max.apply(null, vals);
+                    html += '<tr><td><span class="en">' + r[0] + '</span><span class="ar">' + r[1] + '</span><span class="dim en">' + r[2] + '</span><span class="dim ar">' + r[3] + '</span></td>';
+                    vals.forEach(function (v) {
+                        var cls = "c num" + (v === best ? " best" : "") + (r[4] && v > 20 ? " bad" : "");
+                        html += '<td class="' + cls + '">' + fmt(v) + '</td>';
+                    });
+                    html += '</tr>';
+                });
+                host.insertAdjacentHTML("beforeend", html + '</tbody></table></div>');
+            });
+
+            var tabs = document.querySelectorAll('[role="tab"]');
+            tabs.forEach(function (t) {
+                t.addEventListener("click", function () {
+                    tabs.forEach(function (o) {
+                        var on = o === t;
+                        o.setAttribute("aria-selected", on);
+                        document.getElementById(o.getAttribute("aria-controls")).hidden = !on;
+                    });
+                });
+            });
+
+            function setLang(l) {
+                document.body.classList.remove("lang-en", "lang-ar");
+                document.body.classList.add("lang-" + l);
+                document.documentElement.lang = l;
+                document.querySelectorAll(".lang button").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.lang === l); });
+                try { localStorage.setItem("hrlab-lang", l); } catch (e) { }
+            }
+            document.querySelectorAll(".lang button").forEach(function (b) { b.addEventListener("click", function () { setLang(b.dataset.lang); }); });
+            var saved = "en";
+            try { saved = localStorage.getItem("hrlab-lang") || "en"; } catch (e) { }
+            setLang(saved === "ar" ? "ar" : "en");
+        })();
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,546 @@
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
+from fastapi.middleware.cors import CORSMiddleware
+from docx import Document
+from openai import OpenAI
+import io
+import os
+import json
+
+app = FastAPI(title="HR AI Evaluation Lab API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+MODEL_NAME = "qwen2.5-14b"
+
+api_key = os.getenv("VLLM_API_KEY")
+
+if not api_key:
+    raise ValueError("Missing VLLM_API_KEY! Please set it in your environment or .env file.")
+
+client = OpenAI(
+    base_url="http://localhost:30090/v1",
+    api_key=api_key,
+)
+
+SCHEMA = {
+    "candidate_profile": {
+        "personal_information": {
+            "name": None,
+            "email": None,
+            "phone": None,
+            "location": None
+        },
+        "professional_summary": None,
+        "skills": [],
+        "work_experience": [
+            {
+                "job_title": None,
+                "company": None,
+                "location": None,
+                "start_date": None,
+                "end_date": None,
+                "description": None
+            }
+        ],
+        "education": [
+            {
+                "degree": None,
+                "field_of_study": None,
+                "institution": None,
+                "location": None,
+                "graduation_date": None
+            }
+        ],
+        "certifications": [
+            {
+                "name": None,
+                "issuer": None,
+                "date": None
+            }
+        ],
+        "languages": [
+            {
+                "language": None,
+                "proficiency": None
+            }
+        ]
+    }
+}
+
+
+def extract_docx_text(file_bytes: bytes) -> str:
+    document = Document(io.BytesIO(file_bytes))
+
+    parts = []
+
+    for paragraph in document.paragraphs:
+        text = paragraph.text.strip()
+        if text:
+            parts.append(text)
+
+    for table in document.tables:
+        for row in table.rows:
+            row_text = " | ".join(
+                cell.text.strip()
+                for cell in row.cells
+                if cell.text.strip()
+            )
+
+            if row_text:
+                parts.append(row_text)
+
+    return "\n".join(parts)
+
+
+def normalize_result(result: dict) -> dict:
+    """
+    Normalize the model output into the exact application schema.
+    """
+
+    profile = result.get("candidate_profile", {})
+
+    personal = profile.get("personal_information", {})
+
+    normalized = {
+        "candidate_profile": {
+            "personal_information": {
+                "name": personal.get("name"),
+                "email": personal.get("email"),
+                "phone": personal.get("phone"),
+                "location": personal.get("location"),
+            },
+            "professional_summary": profile.get(
+                "professional_summary"
+            ),
+            "skills": profile.get("skills", []),
+            "work_experience": [],
+            "education": [],
+            "certifications": [],
+            "languages": [],
+        }
+    }
+
+    # Work experience
+    for item in profile.get("work_experience", []):
+        responsibilities = item.get("responsibilities", [])
+
+        description = item.get("description")
+
+        if not description and responsibilities:
+            description = "\n".join(
+                str(value) for value in responsibilities
+            )
+
+        normalized["candidate_profile"]["work_experience"].append(
+            {
+                "job_title": item.get("job_title"),
+                "company": item.get("company"),
+                "location": item.get("location"),
+                "start_date": item.get("start_date"),
+                "end_date": item.get("end_date"),
+                "description": description,
+            }
+        )
+
+    # Education
+    for item in profile.get("education", []):
+        normalized["candidate_profile"]["education"].append(
+            {
+                "degree": item.get("degree"),
+                "field_of_study": item.get("field_of_study"),
+                "institution": item.get("institution"),
+                "location": item.get("location"),
+                "graduation_date": (
+                    item.get("graduation_date")
+                    or item.get("year")
+                ),
+            }
+        )
+
+    # Certifications
+    for item in profile.get("certifications", []):
+        if isinstance(item, str):
+            normalized["candidate_profile"]["certifications"].append(
+                {
+                    "name": item,
+                    "issuer": None,
+                    "date": None,
+                }
+            )
+        else:
+            normalized["candidate_profile"]["certifications"].append(
+                {
+                    "name": item.get("name"),
+                    "issuer": item.get("issuer"),
+                    "date": item.get("date"),
+                }
+            )
+
+    # Languages
+    for item in profile.get("languages", []):
+        if isinstance(item, str):
+            normalized["candidate_profile"]["languages"].append(
+                {
+                    "language": item,
+                    "proficiency": None,
+                }
+            )
+        else:
+            normalized["candidate_profile"]["languages"].append(
+                {
+                    "language": item.get("language"),
+                    "proficiency": item.get("proficiency"),
+                }
+            )
+
+    return normalized
+
+
+@app.get("/")
+def root():
+    return {
+        "service": "HR AI Evaluation Lab API",
+        "status": "running",
+        "model": MODEL_NAME,
+    }
+
+
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "model": MODEL_NAME,
+    }
+
+
+@app.post("/parse-resume")
+async def parse_resume(
+    file: UploadFile = File(...),
+    language: str = Form("en"),
+):
+
+    language = language.lower().strip()
+
+    if language not in {"ar", "en"}:
+       raise HTTPException(
+        status_code=400,
+        detail="Language must be 'ar' or 'en'",
+    )
+
+    if not file.filename:
+        raise HTTPException(
+            status_code=400,
+            detail="No file provided",
+        )
+
+    if not file.filename.lower().endswith(".docx"):
+        raise HTTPException(
+            status_code=400,
+            detail="Only DOCX files are supported",
+        )
+
+    file_bytes = await file.read()
+
+    try:
+        resume_text = extract_docx_text(file_bytes)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Could not read DOCX file: {exc}",
+        )
+
+    if not resume_text.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="The DOCX file contains no readable text",
+        )
+
+    if language == "en":
+       prompt = f"""
+You are a resume information extraction system.
+
+Your task is to extract candidate information from the resume provided below and return exactly one valid JSON object.
+
+STRICT OUTPUT REQUIREMENTS:
+1. Output ONLY the JSON object.
+2. Do NOT use Markdown code fences.
+3. Do NOT include explanations, notes, comments, headings, or text before or after the JSON.
+4. Use exactly the keys and structure defined in the schema below.
+5. Do NOT add, rename, or remove keys.
+6. The output must be parseable by a standard JSON parser.
+7. Use double quotes for all JSON keys and string values.
+8. Do NOT use trailing commas.
+9. Use null for missing scalar values.
+10. Use [] when no items are found for a list field.
+
+EXTRACTION RULES:
+- Extract only information explicitly stated or clearly supported by the resume.
+- Do not infer, guess, fabricate, or complete missing information.
+- Preserve the wording from the resume whenever possible.
+- Include all supported entries when multiple education, experience,
+  certification, skill, or language entries are present.
+- If a section contains no supported entries, return an empty list [].
+
+SKILL RULES:
+- The "skills" field must contain only a list of skill-name strings.
+- Do not create categories or objects inside "skills".
+- Programming languages, frameworks, libraries, tools, technologies,
+  methodologies, and technical competencies should be represented as
+  individual skill strings.
+- The "languages" field is for human languages only, such as English,
+  Arabic, French, etc.
+
+REQUIRED JSON SCHEMA:
+
+{json.dumps(SCHEMA, ensure_ascii=False, indent=2)}
+
+RESUME:
+<resume>
+{resume_text}
+</resume>
+
+Return only the JSON object now.
+"""
+
+    else:
+      prompt = f"""
+أنت نظام متخصص في استخراج المعلومات من السير الذاتية.
+
+مهمتك هي استخراج معلومات المرشح من السيرة الذاتية المقدمة أدناه وإرجاع كائن JSON واحد صالح فقط.
+
+متطلبات الإخراج الصارمة:
+1. أرجع كائن JSON فقط.
+2. لا تستخدم Markdown أو code fences.
+3. لا تضف أي شرح أو ملاحظات أو عناوين أو نص خارج كائن JSON.
+4. استخدم المفاتيح والبنية المحددة في المخطط أدناه بالضبط.
+5. لا تضف أو تعيد تسمية أو تحذف أي مفتاح.
+6. يجب أن يكون الناتج قابلاً للتحليل باستخدام JSON parser قياسي.
+7. استخدم علامات الاقتباس المزدوجة لجميع مفاتيح وقيم JSON النصية.
+8. لا تستخدم trailing commas.
+9. استخدم null عندما تكون القيمة النصية أو المفردة غير موجودة.
+10. استخدم [] عندما لا توجد عناصر في قائمة معينة.
+
+قواعد الاستخراج:
+- استخرج فقط المعلومات المذكورة صراحة أو المدعومة بوضوح في السيرة الذاتية.
+- لا تستنتج أو تخمن أو تختلق أو تكمل أي معلومات غير موجودة.
+- حافظ على صياغة السيرة الذاتية قدر الإمكان.
+- أدرج جميع الإدخالات المدعومة عند وجود أكثر من تعليم أو خبرة
+  أو شهادة أو مهارة أو لغة.
+- إذا لم توجد معلومات مدعومة في قسم معين، أرجع قائمة فارغة [].
+
+قواعد المهارات:
+- يجب أن يحتوي الحقل "skills" على قائمة من أسماء المهارات كنصوص فقط.
+- لا تنشئ تصنيفات أو كائنات داخل "skills".
+- لغات البرمجة والأطر والمكتبات والأدوات والتقنيات والمنهجيات
+  والكفاءات التقنية يجب تمثيلها كمهارات منفصلة.
+- الحقل "languages" مخصص للغات البشرية فقط، مثل العربية والإنجليزية والفرنسية.
+
+مخطط JSON المطلوب:
+
+{json.dumps(SCHEMA, ensure_ascii=False, indent=2)}
+
+السيرة الذاتية:
+<resume>
+{resume_text}
+</resume>
+
+أرجع الآن كائن JSON فقط.
+"""
+
+    try:
+        response = client.chat.completions.create(
+    model=MODEL_NAME,
+    messages=[
+        {
+            "role": "user",
+            "content": prompt,
+        },
+    ],
+    temperature=0,
+    max_tokens=4096,
+)
+
+        content = response.choices[0].message.content
+
+        if not content:
+            raise ValueError("Empty model response")
+
+        content = content.strip()
+
+        if content.startswith("```"):
+            content = content.replace("```json", "", 1)
+            content = content.replace("```", "", 1)
+            content = content.strip()
+
+        result = json.loads(content)
+
+        normalized_result = normalize_result(result)
+
+        return {
+            "status": "success",
+            "model": MODEL_NAME,
+            "filename": file.filename,
+            "result": normalized_result,
+        }
+
+    except json.JSONDecodeError:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Model returned invalid JSON: {content}",
+        )
+
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail=f"Model request failed: {exc}",
+        )
+
+@app.post("/job-match")
+async def job_match(
+    job_description: str = Form(...),
+    files: list[UploadFile] = File(...),
+):
+    if not job_description.strip():
+        raise HTTPException(
+            status_code=400,
+            detail="Job description is required.",
+        )
+
+    if not files:
+        raise HTTPException(
+            status_code=400,
+            detail="At least one resume is required.",
+        )
+
+    results = []
+
+    for file in files:
+        if not file.filename.lower().endswith(".docx"):
+            results.append({
+                "file_name": file.filename,
+                "error": "Only DOCX files are supported.",
+            })
+            continue
+
+        file_bytes = await file.read()
+
+        try:
+            resume_text = extract_docx_text(file_bytes)
+        except Exception:
+            results.append({
+                "file_name": file.filename,
+                "error": "Unable to read the DOCX file.",
+            })
+            continue
+
+        if not resume_text.strip():
+            results.append({
+                "file_name": file.filename,
+                "error": "The DOCX file contains no readable text.",
+            })
+            continue
+
+        prompt = f"""
+You are an HR job matching system.
+
+Compare the candidate resume against the job description.
+
+Return ONLY valid JSON using exactly this structure:
+
+{{
+  "match_score": 0,
+  "matched_skills": [],
+  "missing_skills": [],
+  "experience_match": "Strong",
+  "education_match": "Strong",
+  "language_match": "Strong",
+  "summary": ""
+}}
+
+Scoring:
+- Skills: 50 points
+- Work experience: 20 points
+- Education: 15 points
+- Languages: 10 points
+- Overall role alignment: 5 points
+
+Rules:
+- Score must be between 0 and 100.
+- Use only information explicitly present in the resume.
+- Do not invent skills or experience.
+- Do not assume a skill from a job title alone.
+- matched_skills = relevant requirements demonstrated in the resume.
+- missing_skills = important requirements not demonstrated in the resume.
+- Do not add extra fields.
+- Return JSON only.
+
+JOB DESCRIPTION:
+{job_description}
+
+CANDIDATE RESUME:
+{resume_text}
+"""
+
+        try:
+            response = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": "You are a precise HR job matching system. Return valid JSON only.",
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt,
+                    },
+                ],
+                temperature=0,
+                max_tokens=1200,
+            )
+
+            content = response.choices[0].message.content.strip()
+
+            if content.startswith("```"):
+                content = content.replace("```json", "", 1)
+                content = content.replace("```", "", 1).strip()
+
+            match_result = json.loads(content)
+
+            score = match_result.get("match_score", 0)
+
+            try:
+                score = float(score)
+            except (TypeError, ValueError):
+                score = 0
+
+            match_result["match_score"] = round(
+                max(0, min(100, score)), 1
+            )
+
+            match_result["file_name"] = file.filename
+
+            results.append(match_result)
+
+        except json.JSONDecodeError:
+            results.append({
+                "file_name": file.filename,
+                "error": "The model returned invalid JSON.",
+            })
+
+        except Exception as exc:
+            results.append({
+                "file_name": file.filename,
+                "error": f"Model request failed: {exc}",
+            })
+
+    return {
+        "status": "success",
+        "model": MODEL_NAME,
+        "results": results,
+    }
